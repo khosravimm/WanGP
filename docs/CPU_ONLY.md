@@ -216,3 +216,5 @@ GPU-first. Licenses for WanGP, whisper.cpp and each model are independent.
 - The *browser AudioContext conversion path* has static JS validation,
   but still needs GUI functional testing on an actual browser.
 - Real speaker diarization remains **not implemented**.
+
+گزارش مستقل مقایسه مدل‌ها: [ASR_CPU_EVALUATION_FA.md](ASR_CPU_EVALUATION_FA.md).
