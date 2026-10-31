@@ -2,4 +2,4 @@
 
 Intentionally independent of CUDA/MMGP and optional Torch dependencies.
 """
-VERSION = "19.0-cpu.2"
+VERSION = "19.0-cpu.3"

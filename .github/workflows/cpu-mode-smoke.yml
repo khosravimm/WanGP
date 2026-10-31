@@ -4,15 +4,20 @@ on:
   push:
     branches:
       - feature/cpu-only-v19
+      - feature/native-cpu-ui-v19
     paths:
       - 'cpu_mode/**'
       - 'wgp.py'
+      - 'shared/attention.py'
+      - 'plugins/moss_tts_cpu/**'
       - 'tests/test_cpu_*.py'
       - '.github/workflows/cpu-mode-smoke.yml'
   pull_request:
     paths:
       - 'cpu_mode/**'
       - 'wgp.py'
+      - 'shared/attention.py'
+      - 'plugins/moss_tts_cpu/**'
       - 'tests/test_cpu_*.py'
       - '.github/workflows/cpu-mode-smoke.yml'
 

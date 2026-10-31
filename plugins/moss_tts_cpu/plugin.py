@@ -7,6 +7,7 @@ WanGP/MMGP's other GPU requirements.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -82,7 +83,21 @@ def generate_speech(
         with wave.open(str(path), "rb") as wav:
             if wav.getnframes() < 1200 or wav.getframerate() != 48000:
                 raise RuntimeError("WAV output validation failed.")
-        return str(path)
+        # Gradio only accepts generated paths from the app directory or /tmp.
+        # Preserve the original archival WAV in the configured output folder
+        # while staging a private 0600 copy for the browser to play.
+        with tempfile.NamedTemporaryFile(
+            dir=tempfile.gettempdir(), prefix="wangp_moss_audio_", suffix=".wav",
+            delete=False
+        ) as staged:
+            browser_path = Path(staged.name)
+            try:
+                with path.open("rb") as original:
+                    shutil.copyfileobj(original, staged)
+            except BaseException:
+                browser_path.unlink(missing_ok=True)
+                raise
+        return str(browser_path)
     except (subprocess.SubprocessError, OSError, RuntimeError):
         path.unlink(missing_ok=True)
         raise
@@ -103,7 +118,7 @@ class MossTTSCpuPlugin(WAN2GPPlugin):
             position=3,
         )
 
-    def create_ui(self, api_session=None):
+    def create_ui(self):
         import gradio as gr
 
         with gr.Column():

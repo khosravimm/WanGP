@@ -9,6 +9,13 @@
 > available in CPU mode. See [tests](tests/test_cpu_mode.py) and
 > [capabilities and security limitations](docs/CPU_ONLY.md).
 >
+> **NEW (19.0-cpu.3):** To use the **original WanGP v19 Gradio UI** on a
+> CPU-only machine, launch with `python wgp.py --native-ui-cpu` and select
+> the **MOSS TTS CPU** app in the original app bar. The full original UI
+> loads, but GPU-based model inference remains disabled. This opt-in
+> mode is distinct from the earlier compact `--cpu-only` HTTP frontend.
+> [Native CPU UI guide](docs/NATIVE_CPU_UI.md).
+>
 > This is an independent experimental adaptation of WanGP, not an
 > official upstream CPU release.
 > **Original WanGP v19 Gradio UI on CPU (experimental):** See

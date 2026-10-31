@@ -1,5 +1,11 @@
 ############# WanGP Copyright DeepBeepMeep 2025-2026 #############
 import os, sys
+# Opt-in experimental boot of the genuine WanGP Gradio UI on CPU hardware.
+# Keep the rest of the original application unchanged unless this flag is set.
+NATIVE_UI_CPU = "--native-ui-cpu" in sys.argv
+if NATIVE_UI_CPU:
+    sys.argv.remove("--native-ui-cpu")
+    os.environ["WANGP_NATIVE_UI_CPU"] = "1"
 # Minimal CPU-only launcher: intentionally dispatch before importing PyTorch,
 # CUDA-dependent MMGP, model handlers or the GPU-oriented Gradio application.
 if "--cpu-only" in sys.argv:
@@ -2784,7 +2790,8 @@ override_attention_modes_supported = get_supported_override_attention_modes()
 args = parse_wgp_args(CONFIG_FILENAME)
 migrate_loras_layout()
 
-gpu_major, gpu_minor = (0, 0) if not torch.cuda.is_available() else torch.cuda.get_device_capability(args.gpu if len(args.gpu) > 0 else None)
+gpu_major, gpu_minor = ((0, 0) if (NATIVE_UI_CPU or not torch.cuda.is_available()) else
+                        torch.cuda.get_device_capability(args.gpu if len(args.gpu) > 0 else None))
 if  gpu_major < 8:
     print("Switching to FP16 models when possible as GPU architecture doesn't support optimed BF16 Kernels")
     bfloat16_supported = False
@@ -3039,6 +3046,13 @@ def map_family_handlers(family_handlers):
 
 model_profile_roots_by_architecture = {}
 model_plugin_ids_by_architecture = {}
+
+if NATIVE_UI_CPU:
+    # Native UI CPU exploration must not import GPU model handler families:
+    # they initialize CUDA devices during import, before UI construction.
+    # Retain the upstream TTS family for legitimate form construction;
+    # its GPU inference route remains unavailable in this mode.
+    family_handlers = ["models.TTS.moss_tts.moss_tts_handler"]
 
 model_types_handlers, families_infos,  models_eqv_map, models_comp_map, retired_model_types = map_family_handlers(family_handlers)
 
@@ -7498,6 +7512,10 @@ def generate_media(
     temporal_postprocessing_parameters=None,
     postprocessing_reference_images=None,
 ):
+    if NATIVE_UI_CPU:
+        raise gr.Error("This GPU model cannot run in Native CPU UI mode. "
+                       "Select the MOSS TTS CPU app from the WanGP app bar.")
+
     filename_formatter = None
     if output_filename:
         from shared.utils.filename_formatter import FilenameFormatter
@@ -14895,7 +14913,13 @@ def create_ui():
         stats_app = None
 
     with ui_studio.Blocks(css=css, js=js, theme=theme, title="WanGP", fill_width=True) as main:
-        gr.Markdown(f'<div align=center><H1>Wan<SUP style="color: #2563eb;">GP</SUP> v{WanGP_version} <FONT SIZE=4>by <I>DeepBeepMeep</I></FONT> <FONT SIZE=3>') # (<A HREF='https://github.com/deepbeepmeep/Wan2GP'>Updates</A>)</FONT SIZE=3></H1></div>")
+        gr.Markdown(f'<div align=center><H1>Wan<SUP style="color: #2563eb;">GP</SUP> v{WanGP_version} <FONT SIZE=4>by <I>DeepBeepMeep</I></FONT> <FONT SIZE=3>')
+        if NATIVE_UI_CPU:
+            gr.Markdown("**CPU-only preview:** This is the original WanGP interface. "
+                        "Native model generation (video/image/music/large MOSS-TTS) "
+                        "is disabled without a GPU. Use the **MOSS TTS CPU** app "
+                        "in the app bar for locally tested ONNX speech synthesis. "
+                        "No external access is enabled.") # (<A HREF='https://github.com/deepbeepmeep/Wan2GP'>Updates</A>)</FONT SIZE=3></H1></div>")
         global model_list
 
         tab_state = gr.State({ "tab_no":0 }) 
@@ -15287,7 +15311,8 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Warning: Could not create startup lock file: {e}")
 
-    download_ffmpeg()
+    if not NATIVE_UI_CPU:
+        download_ffmpeg()
     # threading.Thread(target=runner, daemon=True).start()
     os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
     server_port = int(args.server_port)

@@ -1,5 +1,17 @@
 # WanGP CPU Edition changelog
 
+## 19.0-cpu.3 — actual WanGP v19 original interface (experimental)
+- Add opt-in `--native-ui-cpu`, loading the genuine upstream Gradio
+  application rather than rendering a separate frontend.
+- Safely skip import-time GPU capability queries and restrict CUDA-only
+  model handler imports in this opt-in mode.
+- Fail closed when original GPU model generation is attempted; expose
+  MOSS Nano CPU via WanGP's genuine plugin tab.
+- Correct unused plugin `api_session` callback signature and return
+  a private Gradio-compatible WAV copy while keeping the archive.
+- Add independent loopback-only native UI service on port 18088.
+- Add native UI smoke tests and deployment documentation.
+
 ## 19.0-cpu.2 — experimental CPU ASR
 - Add independent whisper.cpp CPU transcription backend and in-browser
   audio transcoding to mono PCM16 WAV at 16 kHz.
