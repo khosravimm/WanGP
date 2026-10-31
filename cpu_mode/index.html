@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111927">
+  <title>WanGP 19.0 CPU · صوت</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <div><p class="eyebrow">WanGP · Community CPU Edition · 19.0-cpu.2</p>
+      <h1>استودیوی تولید صوت <span>بدون GPU</span></h1>
+      <p class="muted">اجرای مستقل روی CPU با ONNX Runtime و MOSS-TTS-Nano؛ بدون CUDA، PyTorch یا MMGP در این مسیر</p>
+    </div>
+    <span class="state" id="health" role="status">بررسی سرویس...</span>
+  </header>
+  <section class="layout" aria-label="تولید گفتار">
+    <article class="panel">
+      <h2>متن به گفتار / Text-to-Speech</h2>
+      <label for="speech">متن گفتار</label>
+      <textarea id="speech" maxlength="1200" rows="6" placeholder="متن فارسی یا انگلیسی...">سلام! این نسخه از وان جی پی بدون کارت گرافیک، گفتار فارسی تولید می‌کند.</textarea>
+      <p class="tip">حداکثر ۱۲۰۰ نویسه؛ کیفیت تلفظ فارسی نیازمند ارزیابی شنیداری است.</p>
+      <div class="fields">
+        <div><label for="demo">صدای پیش‌فرض</label>
+          <select id="demo">
+            <option value="demo-21">فارسی (مرجع رسمی)</option>
+            <option value="demo-10">English · Gentle voice</option>
+            <option value="demo-7">English · OpenMOSS</option>
+            <option value="demo-13">Japanese</option>
+            <option value="demo-22">Arabic</option>
+            <option value="demo-17">Deutsch</option>
+          </select>
+        </div>
+        <div><label for="frames">حداکثر فریم‌های تولید</label>
+          <input type="number" id="frames" min="20" max="375" step="5" value="120" />
+        </div>
+      </div>
+      <label for="reference">فایل مرجع برای شبیه‌سازی صدا (اختیاری)</label>
+      <input id="reference" type="file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/flac,.wav,.mp3,.flac" />
+      <p class="tip">فایل مرجع حداکثر ۲۰ MiB؛ از نمونه‌هایی استفاده کنید که حق استفاده و رضایت صاحب صدا را دارید.</p>
+      <button id="generate" type="button">تولید گفتار با CPU</button>
+      <p id="message" role="status" aria-live="polite"></p>
+    </article>
+    <aside class="panel output">
+      <h2>خروجی صوتی</h2>
+      <audio id="player" controls preload="none"></audio>
+      <a id="download" href="#" download="wangp-cpu-speech.wav" hidden>دریافت WAV</a>
+      <div id="details" class="details">پس از تولید، اطلاعات صوت در این قسمت نمایش داده می‌شود.</div>
+      <hr>
+      <h3>مرجع مدل‌ها</h3>
+      <p>فهرست قابل جست‌وجوی ۱۹۳ مخزن OpenMOSS-Team در تاریخ گردآوری قبلی.</p>
+      <a href="/model-catalog" target="_blank" rel="noopener noreferrer">مشاهده فهرست OpenMOSS</a>
+      <hr>
+      <h3>وضعیت قابلیت‌ها</h3>
+      <div class="feature"><span>تولید گفتار</span><strong>فعال · CPU</strong></div>
+      <div class="feature"><span>Voice Cloning</span><strong>فعال · فایل مرجع</strong></div>
+      <div class="feature"><span>تولید ویدئو</span><strong class="pending">در این نسخه فعال نیست</strong></div>
+      <div class="feature"><span>یکپارچه‌سازی MMGP</span><strong class="pending">فعال نیست</strong></div>
+      <p class="tip">این نسخه آزمایشی، جایگزین همه قابلیت‌های GPU در WanGP اصلی نیست.</p>
+    </aside>
+  </section>
+  <section class="panel asr-panel" aria-label="رونویسی فایل صوتی">
+    <div class="asr-heading">
+      <div><h2>رونویسی صوت به متن / Speech to Text</h2>
+      <p class="muted">Whisper.cpp · CPU · متن فارسی، انگلیسی و چندزبانه</p></div>
+      <span id="asr-health" class="state" role="status">بررسی ASR...</span>
+    </div>
+    <div class="fields">
+      <div><label for="asr-file">فایل صوتی برای رونویسی</label>
+        <input id="asr-file" type="file" accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a" /></div>
+      <div><label for="asr-lang">زبان گفتار</label>
+        <select id="asr-lang">
+          <option value="auto">تشخیص خودکار</option>
+          <option value="fa" selected>فارسی</option>
+          <option value="en">English</option>
+          <option value="ar">العربية</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="tr">Türkçe</option>
+          <option value="ru">Русский</option>
+          <option value="es">Español</option>
+          <option value="it">Italiano</option>
+          <option value="zh">中文</option>
+          <option value="ja">日本語</option>
+        </select>
+      </div>
+    </div>
+    <p class="tip">فایل صوتی حداکثر ۲۰ MiB و ۳ دقیقه. تبدیل به WAV تک‌کاناله 16 kHz در مرورگر انجام می‌شود؛ فایل شما به سرویس خارجی ارسال نمی‌شود.</p>
+    <button type="button" id="transcribe">رونویسی با CPU</button>
+    <p id="asr-message" role="status" aria-live="polite"></p>
+    <label for="asr-output">متن پیاده‌سازی‌شده</label>
+    <textarea id="asr-output" rows="5" readonly placeholder="متن رونویسی‌شده اینجا نمایش داده می‌شود."></textarea>
+    <div class="asr-actions">
+      <a id="asr-download" href="#" download="wangp-transcription.txt" hidden>دریافت متن TXT</a>
+      <span id="asr-meta" class="tip"></span>
+    </div>
+    <p class="tip">مهم: مدل Whisper معمولی تشخیص هویت یا تفکیک گویندگان انجام نمی‌دهد؛ دقت فارسی نیز باید جداگانه ارزیابی شود.</p>
+  </section>
+  <footer>WanGP Community License 2.0 · CPU Edition: speech generation and transcription. Video and diarization are not implemented.</footer>
+</main>
+</body>
+</html>
