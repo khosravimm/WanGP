@@ -2,6 +2,7 @@
 # Modifications Copyright (c) 2025-2026 DeepBeepMeep - part of WanGP, WanGP Community License 2.0 (see LICENSE.txt)
 import functools
 import sys
+import os
 from contextlib import contextmanager, nullcontext
 
 import torch
@@ -15,7 +16,8 @@ from importlib.metadata import version
 
 _is_mps = sys.platform == 'darwin' and hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()
 
-major, minor = (0, 0) if (_is_mps or not torch.cuda.is_available()) else torch.cuda.get_device_capability(None)
+_cpu_ui = os.environ.get("WANGP_NATIVE_UI_CPU") == "1"
+major, minor = (0, 0) if (_is_mps or _cpu_ui or not torch.cuda.is_available()) else torch.cuda.get_device_capability(None)
 bfloat16_supported =  major >= 8
 _MASKED_ATTENTION_SDPA_WARNED = False
 _HEAD_DIM_SDPA_WARNED = False
@@ -305,7 +307,7 @@ def _supported_attention_modes():
     if _is_mps:
         return ("sdpa", "auto")
     ret = get_attention_modes()
-    major, minor = (0, 0) if not torch.cuda.is_available() else torch.cuda.get_device_capability()
+    major, minor = (0, 0) if (_cpu_ui or not torch.cuda.is_available()) else torch.cuda.get_device_capability()
     if  major < 10 or not triton_installed:
         if "sage3" in ret:
             ret.remove("sage3")

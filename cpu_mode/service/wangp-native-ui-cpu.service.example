@@ -1,0 +1,18 @@
+[Unit]
+Description=WanGP v19 original Gradio interface, CPU-only preview
+After=network.target moss-tts-nano-cpu.service
+Wants=moss-tts-nano-cpu.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/Progs/WanGP-Native-CPU
+ExecStart=/opt/Progs/Wan2GP/env_uv/bin/python -u wgp.py --native-ui-cpu --offline --server-port 18088 --server-name 127.0.0.1 --config /opt/models/WanGP-Native-CPU/config
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+UMask=0077
+Environment=HF_HUB_OFFLINE=1
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
