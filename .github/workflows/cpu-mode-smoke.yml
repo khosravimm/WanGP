@@ -7,13 +7,13 @@ on:
     paths:
       - 'cpu_mode/**'
       - 'wgp.py'
-      - 'tests/test_cpu_mode.py'
+      - 'tests/test_cpu_*.py'
       - '.github/workflows/cpu-mode-smoke.yml'
   pull_request:
     paths:
       - 'cpu_mode/**'
       - 'wgp.py'
-      - 'tests/test_cpu_mode.py'
+      - 'tests/test_cpu_*.py'
       - '.github/workflows/cpu-mode-smoke.yml'
 
 permissions:
@@ -36,6 +36,6 @@ jobs:
         run: |
           python -c "import importlib.util; assert importlib.util.find_spec('torch') is None"
       - name: Unit tests and HTTP/voice generation contract tests
-        run: python -m unittest discover -s tests -p test_cpu_mode.py -v
+        run: python -m unittest discover -s tests -p 'test_cpu_*.py' -v
       - name: Compile CPU module
         run: python -m compileall -q cpu_mode

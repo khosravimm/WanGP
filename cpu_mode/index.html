@@ -11,7 +11,7 @@
 <body>
 <main>
   <header>
-    <div><p class="eyebrow">WanGP · Community CPU Edition · 19.0-cpu.1</p>
+    <div><p class="eyebrow">WanGP · Community CPU Edition · 19.0-cpu.2</p>
       <h1>استودیوی تولید صوت <span>بدون GPU</span></h1>
       <p class="muted">اجرای مستقل روی CPU با ONNX Runtime و MOSS-TTS-Nano؛ بدون CUDA، PyTorch یا MMGP در این مسیر</p>
     </div>
@@ -62,7 +62,44 @@
       <p class="tip">این نسخه آزمایشی، جایگزین همه قابلیت‌های GPU در WanGP اصلی نیست.</p>
     </aside>
   </section>
-  <footer>WanGP Community License 2.0 · Source fork: khosravimm/WanGP · CPU Edition E2 scope: audio only.</footer>
+  <section class="panel asr-panel" aria-label="رونویسی فایل صوتی">
+    <div class="asr-heading">
+      <div><h2>رونویسی صوت به متن / Speech to Text</h2>
+      <p class="muted">Whisper.cpp · CPU · متن فارسی، انگلیسی و چندزبانه</p></div>
+      <span id="asr-health" class="state" role="status">بررسی ASR...</span>
+    </div>
+    <div class="fields">
+      <div><label for="asr-file">فایل صوتی برای رونویسی</label>
+        <input id="asr-file" type="file" accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a" /></div>
+      <div><label for="asr-lang">زبان گفتار</label>
+        <select id="asr-lang">
+          <option value="auto">تشخیص خودکار</option>
+          <option value="fa" selected>فارسی</option>
+          <option value="en">English</option>
+          <option value="ar">العربية</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="tr">Türkçe</option>
+          <option value="ru">Русский</option>
+          <option value="es">Español</option>
+          <option value="it">Italiano</option>
+          <option value="zh">中文</option>
+          <option value="ja">日本語</option>
+        </select>
+      </div>
+    </div>
+    <p class="tip">فایل صوتی حداکثر ۲۰ MiB و ۳ دقیقه. تبدیل به WAV تک‌کاناله 16 kHz در مرورگر انجام می‌شود؛ فایل شما به سرویس خارجی ارسال نمی‌شود.</p>
+    <button type="button" id="transcribe">رونویسی با CPU</button>
+    <p id="asr-message" role="status" aria-live="polite"></p>
+    <label for="asr-output">متن پیاده‌سازی‌شده</label>
+    <textarea id="asr-output" rows="5" readonly placeholder="متن رونویسی‌شده اینجا نمایش داده می‌شود."></textarea>
+    <div class="asr-actions">
+      <a id="asr-download" href="#" download="wangp-transcription.txt" hidden>دریافت متن TXT</a>
+      <span id="asr-meta" class="tip"></span>
+    </div>
+    <p class="tip">مهم: مدل Whisper معمولی تشخیص هویت یا تفکیک گویندگان انجام نمی‌دهد؛ دقت فارسی نیز باید جداگانه ارزیابی شود.</p>
+  </section>
+  <footer>WanGP Community License 2.0 · CPU Edition: speech generation and transcription. Video and diarization are not implemented.</footer>
 </main>
 </body>
 </html>

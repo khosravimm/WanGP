@@ -82,3 +82,103 @@ async function generate() {
 
 $("generate").addEventListener("click", generate);
 updateHealth();
+
+// Browser-side audio conversion ensures whisper.cpp receives a validated
+// mono 16 kHz 16-bit PCM WAV while leaving the server stdlib-only.
+let previousTranscriptUrl = null;
+
+async function checkASR() {
+  try {
+    const response = await fetch("/api/asr-health", {cache:"no-store"});
+    const data = await response.json();
+    const ready = response.ok && data.status === "ok";
+    $("asr-health").textContent = ready ? "ASR آماده · CPU" : "ASR در دسترس نیست";
+    $("asr-health").classList.toggle("ready", ready);
+    $("transcribe").disabled = !ready;
+  } catch (_) {
+    $("asr-health").textContent = "ASR در دسترس نیست";
+    $("transcribe").disabled = true;
+  }
+}
+
+function encodeWav16k(audioBuffer) {
+  const samples = audioBuffer.getChannelData(0);
+  const wav = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(wav);
+  const str = (offset, text) => {
+    for (let i = 0; i < text.length; ++i) view.setUint8(offset + i, text.charCodeAt(i));
+  };
+  str(0,"RIFF"); view.setUint32(4,36+samples.length*2,true);
+  str(8,"WAVE"); str(12,"fmt ");
+  view.setUint32(16,16,true); view.setUint16(20,1,true);
+  view.setUint16(22,1,true); view.setUint32(24,16000,true);
+  view.setUint32(28,32000,true); view.setUint16(32,2,true);
+  view.setUint16(34,16,true); str(36,"data");
+  view.setUint32(40,samples.length*2,true);
+  for (let i = 0; i < samples.length; i++) {
+    const value = Math.max(-1,Math.min(1,samples[i]));
+    view.setInt16(44+i*2, value < 0 ? value*32768 : value*32767,true);
+  }
+  return new Blob([wav],{type:"audio/wav"});
+}
+
+async function decodeAsWav16k(file) {
+  const buffer = await file.arrayBuffer();
+  const audioContext = new AudioContext();
+  try {
+    const decoded = await audioContext.decodeAudioData(buffer);
+    if (!decoded.duration || decoded.duration > 180)
+      throw new Error("طول فایل صوتی باید حداکثر ۱۸۰ ثانیه باشد.");
+    const frames = Math.ceil(decoded.duration * 16000);
+    const offline = new OfflineAudioContext(1,frames,16000);
+    const source = offline.createBufferSource();
+    source.buffer = decoded;
+    source.connect(offline.destination);
+    source.start();
+    const rendered = await offline.startRendering();
+    return encodeWav16k(rendered);
+  } finally {
+    await audioContext.close();
+  }
+}
+
+async function transcribeAudio() {
+  const file = $("asr-file").files[0];
+  if (!file || !file.size || file.size > 20*1024*1024) {
+    $("asr-message").textContent = "یک فایل صوتی معتبر و حداکثر ۲۰ MiB انتخاب کنید.";
+    return;
+  }
+  $("transcribe").disabled = true;
+  $("asr-output").value = "";
+  $("asr-message").textContent = "در حال تبدیل صوت به 16 kHz...";
+  const started = performance.now();
+  try {
+    const wav = await decodeAsWav16k(file);
+    const form = new FormData();
+    form.append("language",$("asr-lang").value);
+    form.append("file",wav,"audio.wav");
+    $("asr-message").textContent = "در حال رونویسی با Whisper روی CPU...";
+    const response = await fetch("/api/transcribe",{
+      method:"POST", body:form, cache:"no-store"
+    });
+    const result = await response.json();
+    if(!response.ok) throw new Error(result.error || "خطای رونویسی");
+    $("asr-output").value = result.text || "";
+    const sec = ((performance.now()-started)/1000).toFixed(1);
+    $("asr-message").textContent = "رونویسی انجام شد.";
+    $("asr-meta").textContent = "زبان تشخیص‌داده‌شده: "+(result.language_detected||"نامشخص")+
+      " · مدت صوت: "+result.duration_seconds+" ثانیه · پردازش: "+sec+" ثانیه"+
+      " · تعداد بخش‌ها: "+(result.segments||[]).length;
+    if(previousTranscriptUrl) URL.revokeObjectURL(previousTranscriptUrl);
+    previousTranscriptUrl=URL.createObjectURL(
+      new Blob([result.text||""],{type:"text/plain;charset=utf-8"}));
+    $("asr-download").href=previousTranscriptUrl;
+    $("asr-download").hidden=false;
+  }catch(error) {
+    $("asr-message").textContent = "خطا: "+error.message;
+  }finally {
+    $("transcribe").disabled = false;
+  }
+}
+$("transcribe").addEventListener("click",transcribeAudio);
+checkASR();

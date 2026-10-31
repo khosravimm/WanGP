@@ -17,3 +17,9 @@ audio{width:100%;margin:6px 0 16px}a{color:#8fd6fa}a:hover{text-decoration:none}
 #message{min-height:1.5rem}.feature{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #394557;font-size:.84rem}.feature strong{color:#8ee2b5}.feature strong.pending{color:#e7b97d}
 hr{border:0;border-top:1px solid #3b485a;margin:22px 0}footer{font-size:.8rem;margin-top:30px;text-align:center}
 @media(max-width:780px){.layout,.fields{grid-template-columns:1fr}header{flex-direction:column}main{padding:20px 12px}.panel{padding:18px}}
+
+.asr-panel{margin-top:20px}.asr-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.asr-heading h2{margin-bottom:4px}.asr-panel button{margin-top:8px}
+.asr-actions{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-top:10px}
+#asr-output{min-height:110px}.asr-actions a[hidden]{display:none}
+@media(max-width:780px){.asr-heading{flex-direction:column}}

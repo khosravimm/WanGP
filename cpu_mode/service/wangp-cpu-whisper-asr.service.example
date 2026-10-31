@@ -1,0 +1,15 @@
+[Unit]
+Description=WanGP CPU Whisper transcription worker (local only)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/models/WanGP-CPU-ASR
+ExecStart=/opt/Progs/Unsloth/whisper.cpp/build/bin/whisper-server --no-gpu --model /opt/models/WanGP-CPU-ASR/weights/ggml-base.bin --host 127.0.0.1 --port 18085 --threads 8 --language auto
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=default.target

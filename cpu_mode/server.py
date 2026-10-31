@@ -19,10 +19,13 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from . import VERSION
+from .asr import (AudioValidationError, parse_transcription_multipart,
+                  form_for_whisper, normalize_whisper_result, validate_pcm_wav)
 
 MAX_REQUEST_BYTES = 21 * 1024 * 1024  # reference audio max 20 MiB (+ multipart metadata)
 MAX_BACKEND_RESPONSE_BYTES = 48 * 1024 * 1024
 DEFAULT_BACKEND = "http://127.0.0.1:18083"
+DEFAULT_ASR_BACKEND = "http://127.0.0.1:18085"
 INDEX_PATH = Path(__file__).with_name("index.html")
 _LOG = logging.getLogger(__name__)
 
@@ -52,7 +55,7 @@ def call_backend(backend: str, path: str, *, method: str = "GET",
                  data: bytes | None = None, content_type: str | None = None,
                  timeout: float = 120) -> tuple[int, bytes, str]:
     """Fixed-origin HTTP transport. Rejects backend redirects (avoid SSRF)."""
-    if path not in ("/health", "/api/generate", "/model-catalog"):
+    if path not in ("/health", "/api/generate", "/model-catalog", "/", "/inference"):
         raise ValueError("Backend path not allowed.")
     headers = {}
     if content_type:
@@ -71,17 +74,21 @@ def call_backend(backend: str, path: str, *, method: str = "GET",
                 raise ValueError("Backend response exceeded the configured limit.")
             return response.status, payload, response.headers.get("Content-Type", "application/json")
     except urllib.error.HTTPError as exc:
-        payload = exc.read(min(MAX_BACKEND_RESPONSE_BYTES, 8192))
-        return exc.code, payload, exc.headers.get("Content-Type", "application/json")
+        try:
+            payload = exc.read(min(MAX_BACKEND_RESPONSE_BYTES, 8192))
+            return exc.code, payload, exc.headers.get("Content-Type", "application/json")
+        finally:
+            exc.close()
 
 
 class CpuHttpServer(ThreadingHTTPServer):
     allow_reuse_address = True
     daemon_threads = True
 
-    def __init__(self, server_address, handler_class, backend: str):
-        super().__init__(server_address, handler_class)
+    def __init__(self, server_address, handler_class, backend: str, asr_backend: str):
         self.backend = validate_backend_url(backend)
+        self.asr_backend = validate_backend_url(asr_backend)
+        super().__init__(server_address, handler_class)
         self.generation_slot = threading.BoundedSemaphore(value=1)
 
 
@@ -148,7 +155,17 @@ class Handler(BaseHTTPRequestHandler):
                 "status": "ok", "version": VERSION, "runtime": "cpu-only",
                 "gpu_required": False, "audio": "moss-nano-onnx",
                 "video": "not-implemented", "backend": "loopback",
+                "transcription": "whisper.cpp-cpu-if-installed",
+                "speaker_diarization": False,
             })
+        if self.path == "/api/asr-health":
+            try:
+                status, _, _ = call_backend(self.server.asr_backend, "/", timeout=3)
+                return self._json(200 if status == 200 else 503, {
+                    "status": "ok" if status == 200 else "unavailable",
+                    "engine": "whisper.cpp-cpu", "speaker_diarization": False})
+            except (OSError, ValueError, urllib.error.URLError):
+                return self._json(503, {"status": "unavailable", "speaker_diarization": False})
         if self.path in ("/api/backend-health", "/model-catalog"):
             target = "/health" if self.path.endswith("backend-health") else "/model-catalog"
             try:
@@ -163,7 +180,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._safe_host():
             return
-        if self.path != "/api/generate":
+        if self.path not in ("/api/generate", "/api/transcribe"):
             return self._json(404, {"error": "Unknown CPU-mode route."})
         # Deny cross-origin browser submissions; loopback access is local-only.
         origin = self.headers.get("Origin", "")
@@ -183,11 +200,31 @@ class Handler(BaseHTTPRequestHandler):
         if not 0 < length <= MAX_REQUEST_BYTES:
             return self._json(413, {"error": "Audio request exceeds 21 MiB."})
         if not self.server.generation_slot.acquire(blocking=False):
-            return self._json(429, {"error": "CPU is already generating audio; retry later."})
+            return self._json(429, {"error": "CPU is already processing an audio job; retry later."})
         try:
             data = self.rfile.read(length)
             if len(data) != length:
                 return self._json(400, {"error": "Incomplete request body."})
+            if self.path == "/api/transcribe":
+                try:
+                    audio, language = parse_transcription_multipart(mime, data)
+                    seconds = validate_pcm_wav(audio)
+                    request_data, request_type = form_for_whisper(audio, language)
+                except (AudioValidationError, UnicodeError) as exc:
+                    return self._json(422, {"error": str(exc)})
+                try:
+                    status, payload, _ = call_backend(
+                        self.server.asr_backend, "/inference", method="POST",
+                        data=request_data, content_type=request_type, timeout=240)
+                except (OSError, ValueError, urllib.error.URLError) as exc:
+                    _LOG.warning("CPU ASR unavailable: %s", type(exc).__name__)
+                    return self._json(503, {"error": "Local whisper.cpp inference unavailable."})
+                if status != 200:
+                    return self._json(502, {"error": "Whisper.cpp rejected the audio."})
+                try:
+                    return self._json(200, normalize_whisper_result(payload, language, seconds))
+                except AudioValidationError as exc:
+                    return self._json(502, {"error": str(exc)})
             try:
                 status, payload, ctype = call_backend(
                     self.server.backend, "/api/generate", method="POST",
@@ -201,12 +238,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def create_server(host: str = "127.0.0.1", port: int = 18084,
-                  backend: str = DEFAULT_BACKEND) -> CpuHttpServer:
+                  backend: str = DEFAULT_BACKEND,
+                  asr_backend: str = DEFAULT_ASR_BACKEND) -> CpuHttpServer:
     if not check_loopback_host(host):
         raise ValueError("CPU mode must bind to loopback only; use an authenticated proxy for external access.")
     if not 0 <= port <= 65535:
         raise ValueError("Invalid port.")
-    return CpuHttpServer((host, port), Handler, backend)
+    return CpuHttpServer((host, port), Handler, backend, asr_backend)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -217,9 +255,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=18084)
     parser.add_argument("--moss-url", default=os.environ.get("WANGP_CPU_MOSS_URL", DEFAULT_BACKEND))
+    parser.add_argument("--asr-url", default=os.environ.get("WANGP_CPU_ASR_URL", DEFAULT_ASR_BACKEND))
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    httpd = create_server(host=args.host, port=args.port, backend=args.moss_url)
+    httpd = create_server(host=args.host, port=args.port, backend=args.moss_url,
+                          asr_backend=args.asr_url)
     print(f"WanGP {VERSION} CPU-only audio UI at http://{args.host}:{httpd.server_port}/",
           flush=True)
     try:

@@ -1,9 +1,9 @@
 # WanGP
 
 > **Fork-specific CPU Edition (experimental):** This fork includes
-> [WanGP 19.0-cpu.1](docs/CPU_ONLY.md), a deliberately limited
-> **CPU-only speech UI** enabled with `python wgp.py --cpu-only`.
-> It uses an independently installed local MOSS-TTS-Nano ONNX service.
+> [WanGP 19.0-cpu.2](docs/CPU_ONLY.md), a deliberately limited
+> **CPU-only speech and transcription UI** enabled with `python wgp.py --cpu-only`.
+> It uses independently installed local MOSS-TTS-Nano ONNX and whisper.cpp services.
 > **The original WanGP GPU launcher is unchanged** when this flag is absent.
 > Video generation, MMGP, Deepy Prime and the full gallery are not
 > available in CPU mode. See [tests](tests/test_cpu_mode.py) and

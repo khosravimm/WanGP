@@ -1,6 +1,6 @@
-# WanGP Community CPU Edition — v19.0-cpu.1
+# WanGP Community CPU Edition — v19.0-cpu.2
 
-**Status: experimental audio MVP (E2 on Sal-AI). This does not imply video
+**Status: experimental speech/audio MVP (E2 on Sal-AI). This does not imply video
 generation or MMGP/Deepy GPU workloads run on CPU.**
 
 This edition is maintained on the fork
@@ -16,13 +16,13 @@ the main GPU pipeline. It launches a minimal, standard-library HTTP server:
 
 ```
 Browser :18084 (WanGP CPU UI and HTTP API)
-    |
-    | fixed local-origin HTTP, one generation at a time
-    v
-127.0.0.1:18083 (OpenMOSS-TTS-Nano ONNX CPU service)
-    |
-    v
-ONNXRuntime / local 100M model + audio tokenizer -> 48kHz WAV
+    |                         |
+    | TTS                     | ASR, 16kHz mono PCM WAV
+    v                         v
+127.0.0.1:18083              127.0.0.1:18085
+MOSS-TTS-Nano ONNX CPU        whisper.cpp CPU
+    |                         |
+48kHz stereo WAV             transcript JSON, timestamps
 ```
 
 The audio engine is the separately-installed, independently licensed
@@ -49,7 +49,8 @@ python3 wgp.py --cpu-only --host 127.0.0.1 --port 18084 \
 
 On the **same host**, open `http://127.0.0.1:18084/`.
 The app exposes `/health`, `/api/backend-health`, `/model-catalog`
-and `/api/generate`. The latter accepts multipart form data following
+and `/api/generate`, `/api/asr-health`, `/api/transcribe`.
+The generation endpoint accepts multipart form data following
 the upstream MOSS ONNX `POST /api/generate` contract; it returns
 base64-encoded WAV JSON. Selecting a built-in voice uses upstream
 `demo_id`; voice cloning uploads a reference audio file.
@@ -61,7 +62,17 @@ this experimental mode has no built-in user authentication.
 
 ## Operational limits / security gates
 
-- No GPU required to launch frontend; no inference without ONNX backend.
+- No GPU required to launch frontend; TTS inference needs ONNX backend;
+  ASR inference independently needs whisper.cpp backend.
+- ASR browser decodes media locally and resamples to 16kHz mono WAV via
+  Web Audio API; this browser-side conversion has not been GUI end-to-end
+  automated; HTTP ASR route is E2-verified.
+- ASR upload must be PCM 16-bit mono 16kHz WAV, <=180 seconds, <=20MiB;
+  allowed language codes are explicitly enumerated.
+- Optional whisper.cpp server requires a separately obtained multilingual
+  GGML model; never use an English-only `.en` checkpoint for Persian.
+- **No speaker diarization** by the base Whisper ASR model; do not infer
+  speaker labels from segments or word timestamps.
 - 21 MiB maximum upload request, upstream 20 MiB audio file cap.
 - 48 MiB response cap; fixed loopback-only backend origin and path allowlist.
 - No arbitrary URL proxying, external HTTP redirect following, nor shell invocation.
@@ -72,7 +83,7 @@ this experimental mode has no built-in user authentication.
   JSON in memory and does not persist voice uploads.
 - The UI exposes a catalog for offline search of OpenMOSS repos if installed.
 - CPU inference performance and voice quality vary; no MOS/ASR validation.
-- **Not available:** text-to-video, image-to-video, automatic video synthesis,
+- **Not available:** speaker diarization, text-to-video, image-to-video, automatic video synthesis,
   GPU models, main WanGP Gallery, full MMGP-compatible workflow,
   Deepy Prime/Showrunner.
 
@@ -126,3 +137,82 @@ structure (E2), not subjective speech quality.
 4. Model discovery and selection with explicit per-backend CPU capability.
 5. Video generation only after a reproducible CPU model, memory, latency
    and quality measurement demonstrates feasibility.
+
+## ASR addition (v19.0-cpu.2)
+
+**Selected for immediate CPU deployment:** ggml-org/whisper.cpp, via a
+preinstalled native CPU binary, with multilingual Whisper Base model for
+the initial proof. This avoids another Python/Torch runtime. An optional
+Small multilingual checkpoint may improve accuracy at higher resource
+cost but must be evaluated on labeled Persian speech, not assumed better.
+
+The reference GGML models are published at
+https://huggingface.co/ggerganov/whisper.cpp .
+On Sal-AI, the Base binary is at
+`/opt/models/WanGP-CPU-ASR/weights/ggml-base.bin` (SHA-1
+`465707469ff3a37a2b9b8d8f89f2f99de7299dac`).
+
+Existing prebuilt native executable (owned by a different application,
+**not copied or modified**):
+`/opt/Progs/Unsloth/whisper.cpp/build/bin/whisper-server`.
+
+Run standalone without GPU:
+
+```bash
+whisper-server --no-gpu   --model /opt/models/WanGP-CPU-ASR/weights/ggml-base.bin   --host 127.0.0.1 --port 18085 --threads 8 --language auto
+```
+
+Replace `whisper-server` above with its actual executable path on your
+host. Example systemd service: `cpu_mode/service/wangp-cpu-whisper-asr.service.example`.
+Backend is loopback-only and is **not authenticated**; do not expose it
+or the CPU web frontend to arbitrary LAN users. The native server also
+has its own model loading endpoint: treat it as a trusted local tool,
+never a multi-tenant public service.
+
+The browser accepts audio files supported by Web Audio API up to
+20 MiB/3 minutes. It locally decodes and resamples to 16kHz mono PCM16,
+then sends the preprocessed WAV to the trusted WanGP CPU frontend.
+The frontend independently verifies the WAV header, format, bytes,
+duration and multipart content before forwarding on a fixed local
+`/inference` route to whisper.cpp.
+
+**Initial E2 quality caveat:** On a 6.8-second synthetic Persian voice
+sample from MOSS Nano, Whisper Base returned only `سالوم` for a much
+longer target sentence. Thus the pipeline runs but Persian accuracy
+on this sample is poor. Do not claim usable Persian WER until a
+human-labeled multi-speaker evaluation exists. No diarization is
+implemented; Whisper's segments are timestamp chunks, not speaker IDs.
+
+### ASR testing
+
+```bash
+python -m unittest discover -s tests -p 'test_cpu_*.py' -v
+curl -f http://127.0.0.1:18084/api/asr-health
+curl -f http://127.0.0.1:18084/api/transcribe   -F 'language=fa' -F 'file=@/path/mono-16kHz-PCM16.wav'
+```
+
+`docs/CPU_ONLY.md` describes the intentionally limited feature scope.
+Only the CPU mode is supported without GPU; full native WanGP remains
+GPU-first. Licenses for WanGP, whisper.cpp and each model are independent.
+
+
+### Verified ASR integration (Sal-AI; E2; 2026-10-31 UTC)
+
+- Whisper Base multilingual 142 MiB, SHA-1 verified against official table.
+- Native `whisper-server --no-gpu` running via user service
+  `wangp-cpu-whisper-asr.service` on 127.0.0.1:18085.
+- `POST http://127.0.0.1:18084/api/transcribe` with 16 kHz mono PCM
+  and `language=fa`: HTTP **200**, wall time **0.883s** for a
+  **6.8s** generated Persian voice sample; one timestamp segment.
+- Result text was only `سالوم`, while the original text was longer.
+  This is **a failed informal accuracy check**, not proof of Persian
+  speech-to-text suitability. The detected language was English even
+  with requested Persian decoding; the API reports both separately.
+- Malformed audio is rejected by WanGP endpoint: HTTP **422**.
+- The original speech generation API still produced a 48kHz stereo WAV
+  through the same frontend: HTTP **200**, **4.88s** audio and **5.25s**
+  request time.
+- 26 Python/HTTP tests passed locally before this documentation update.
+- The *browser AudioContext conversion path* has static JS validation,
+  but still needs GUI functional testing on an actual browser.
+- Real speaker diarization remains **not implemented**.
