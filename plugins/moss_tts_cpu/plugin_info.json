@@ -1,0 +1,8 @@
+{
+  "name": "MOSS-TTS Nano CPU",
+  "author": "Sal-AI local integration",
+  "version": "0.1.0",
+  "type": "app",
+  "description": "CPU-only text-to-speech and voice cloning backed by the separate OpenMOSS ONNX installation; does not use MMGP or CUDA.",
+  "wan2gp_version": "18.84"
+}

@@ -1,0 +1,41 @@
+name: CPU-only WanGP smoke
+
+on:
+  push:
+    branches:
+      - feature/cpu-only-v19
+    paths:
+      - 'cpu_mode/**'
+      - 'wgp.py'
+      - 'tests/test_cpu_mode.py'
+      - '.github/workflows/cpu-mode-smoke.yml'
+  pull_request:
+    paths:
+      - 'cpu_mode/**'
+      - 'wgp.py'
+      - 'tests/test_cpu_mode.py'
+      - '.github/workflows/cpu-mode-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test-cpu-mode:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Confirm no CUDA/Torch dependencies
+        run: |
+          python -c "import importlib.util; assert importlib.util.find_spec('torch') is None"
+      - name: Unit tests and HTTP/voice generation contract tests
+        run: python -m unittest discover -s tests -p test_cpu_mode.py -v
+      - name: Compile CPU module
+        run: python -m compileall -q cpu_mode

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111927">
+  <title>WanGP 19.0 CPU · صوت</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <div><p class="eyebrow">WanGP · Community CPU Edition · 19.0-cpu.1</p>
+      <h1>استودیوی تولید صوت <span>بدون GPU</span></h1>
+      <p class="muted">اجرای مستقل روی CPU با ONNX Runtime و MOSS-TTS-Nano؛ بدون CUDA، PyTorch یا MMGP در این مسیر</p>
+    </div>
+    <span class="state" id="health" role="status">بررسی سرویس...</span>
+  </header>
+  <section class="layout" aria-label="تولید گفتار">
+    <article class="panel">
+      <h2>متن به گفتار / Text-to-Speech</h2>
+      <label for="speech">متن گفتار</label>
+      <textarea id="speech" maxlength="1200" rows="6" placeholder="متن فارسی یا انگلیسی...">سلام! این نسخه از وان جی پی بدون کارت گرافیک، گفتار فارسی تولید می‌کند.</textarea>
+      <p class="tip">حداکثر ۱۲۰۰ نویسه؛ کیفیت تلفظ فارسی نیازمند ارزیابی شنیداری است.</p>
+      <div class="fields">
+        <div><label for="demo">صدای پیش‌فرض</label>
+          <select id="demo">
+            <option value="demo-21">فارسی (مرجع رسمی)</option>
+            <option value="demo-10">English · Gentle voice</option>
+            <option value="demo-7">English · OpenMOSS</option>
+            <option value="demo-13">Japanese</option>
+            <option value="demo-22">Arabic</option>
+            <option value="demo-17">Deutsch</option>
+          </select>
+        </div>
+        <div><label for="frames">حداکثر فریم‌های تولید</label>
+          <input type="number" id="frames" min="20" max="375" step="5" value="120" />
+        </div>
+      </div>
+      <label for="reference">فایل مرجع برای شبیه‌سازی صدا (اختیاری)</label>
+      <input id="reference" type="file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/flac,.wav,.mp3,.flac" />
+      <p class="tip">فایل مرجع حداکثر ۲۰ MiB؛ از نمونه‌هایی استفاده کنید که حق استفاده و رضایت صاحب صدا را دارید.</p>
+      <button id="generate" type="button">تولید گفتار با CPU</button>
+      <p id="message" role="status" aria-live="polite"></p>
+    </article>
+    <aside class="panel output">
+      <h2>خروجی صوتی</h2>
+      <audio id="player" controls preload="none"></audio>
+      <a id="download" href="#" download="wangp-cpu-speech.wav" hidden>دریافت WAV</a>
+      <div id="details" class="details">پس از تولید، اطلاعات صوت در این قسمت نمایش داده می‌شود.</div>
+      <hr>
+      <h3>مرجع مدل‌ها</h3>
+      <p>فهرست قابل جست‌وجوی ۱۹۳ مخزن OpenMOSS-Team در تاریخ گردآوری قبلی.</p>
+      <a href="/model-catalog" target="_blank" rel="noopener noreferrer">مشاهده فهرست OpenMOSS</a>
+      <hr>
+      <h3>وضعیت قابلیت‌ها</h3>
+      <div class="feature"><span>تولید گفتار</span><strong>فعال · CPU</strong></div>
+      <div class="feature"><span>Voice Cloning</span><strong>فعال · فایل مرجع</strong></div>
+      <div class="feature"><span>تولید ویدئو</span><strong class="pending">در این نسخه فعال نیست</strong></div>
+      <div class="feature"><span>یکپارچه‌سازی MMGP</span><strong class="pending">فعال نیست</strong></div>
+      <p class="tip">این نسخه آزمایشی، جایگزین همه قابلیت‌های GPU در WanGP اصلی نیست.</p>
+    </aside>
+  </section>
+  <footer>WanGP Community License 2.0 · Source fork: khosravimm/WanGP · CPU Edition E2 scope: audio only.</footer>
+</main>
+</body>
+</html>

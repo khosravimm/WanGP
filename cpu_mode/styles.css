@@ -1,0 +1,19 @@
+:root{color-scheme:dark;font:16px/1.65 system-ui,Segoe UI,Tahoma,Arial,sans-serif;background:#0e1420;color:#e9edf8}
+*{box-sizing:border-box}body{margin:0}main{max-width:1200px;margin:0 auto;padding:35px 25px}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin:15px 0 28px}
+.eyebrow{color:#7db9ea;font-size:.78rem;letter-spacing:.06em}h1{font-size:clamp(1.4rem,3vw,2.25rem);line-height:1.35;margin:0}
+h1 span{color:#83dfbc}h2{font-size:1.16rem;margin:0 0 24px}h3{font-size:1rem}.muted,.tip,.details,footer{color:#aab8cd}
+.layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px}
+.panel{padding:25px;background:#192334;border:1px solid #344356;border-radius:16px;min-width:0}
+label{display:block;font-weight:650;font-size:.9rem;margin:15px 0 7px}
+textarea,select,input[type=number],input[type=file]{border:1px solid #536279;background:#101927;color:#eff5ff;border-radius:9px;width:100%;padding:11px;font:inherit}
+textarea{resize:vertical}.fields{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+button{padding:13px 22px;border:0;border-radius:8px;color:#071428;background:#86ddbc;font-weight:750;font:inherit;cursor:pointer;margin-top:20px;width:100%}
+button:disabled{opacity:.5;cursor:not-allowed}.state{border:1px solid #56657c;color:#bcc8d8;white-space:nowrap;padding:5px 12px;border-radius:99px;font-size:.85rem}
+.state.ready{border-color:#6fd7ab;color:#a5f0cd}.tip{font-size:.77rem;margin-top:7px}
+audio{width:100%;margin:6px 0 16px}a{color:#8fd6fa}a:hover{text-decoration:none}
+#download{display:inline-block;background:#2c425a;padding:8px 14px;border-radius:8px}
+#download[hidden]{display:none}.details{white-space:pre-wrap;font-size:.86rem;overflow-wrap:anywhere;margin:16px 0}
+#message{min-height:1.5rem}.feature{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #394557;font-size:.84rem}.feature strong{color:#8ee2b5}.feature strong.pending{color:#e7b97d}
+hr{border:0;border-top:1px solid #3b485a;margin:22px 0}footer{font-size:.8rem;margin-top:30px;text-align:center}
+@media(max-width:780px){.layout,.fields{grid-template-columns:1fr}header{flex-direction:column}main{padding:20px 12px}.panel{padding:18px}}

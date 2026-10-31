@@ -1,5 +1,12 @@
 ############# WanGP Copyright DeepBeepMeep 2025-2026 #############
 import os, sys
+# Minimal CPU-only launcher: intentionally dispatch before importing PyTorch,
+# CUDA-dependent MMGP, model handlers or the GPU-oriented Gradio application.
+if "--cpu-only" in sys.argv:
+    from cpu_mode.server import main as _start_cpu_mode
+    _start_cpu_mode(sys.argv[1:])
+    sys.exit(0)
+
 from tqdm import tqdm
 
 WanGP_version = "19.0"
