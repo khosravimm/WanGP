@@ -11,6 +11,9 @@
 >
 > This is an independent experimental adaptation of WanGP, not an
 > official upstream CPU release.
+> **Original WanGP v19 Gradio UI on CPU (experimental):** See
+> [original interface notes](docs/ORIGINAL_UI_CPU_FA.md); launch with
+> `python wgp.py --offline --server-port 18087` from a prepared CPU-only host.
 
 
 -----
